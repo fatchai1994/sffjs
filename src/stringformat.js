@@ -1,4 +1,4 @@
-﻿/**
+/**
  * String.format for JavaScript {version}
  * https://github.com/dmester/sffjs
  *  
@@ -313,7 +313,7 @@ var sffjs = (function() {
      */
     function processFormatItem(pathOrIndex, align, formatString, args) {        
         var value, 
-            index = parseInt(pathOrIndex, 10), 
+            index = parseInt(pathOrIndex, 10) - 1, 
             paddingLength, 
             padding = "";
         
@@ -358,15 +358,21 @@ var sffjs = (function() {
      * @param {number} maxDecimalDigits The maximum number of decimal digits. The number is rounded if necessary.
      * @param {string} radixPoint The string that will be appended to the output as a radix point.
      * @param {string} thousandSeparator The string that will be used as a thousand separator of the integral digits.
+     * @param {boolean} unsigned Convert in input number to unsigned.
      * @returns {string} The formatted value as a string.
      */
-    function basicNumberFormatter(number, minIntegralDigits, minDecimalDigits, maxDecimalDigits, radixPoint, thousandSeparator) {
+    function basicNumberFormatter(number, minIntegralDigits, minDecimalDigits, maxDecimalDigits, radixPoint, thousandSeparator, unsigned) {
         var integralDigits, decimalDigits, out = [];
         out.t = thousandSeparator;
         
         // Minus sign
-        if (number < 0) {
+        if (!unsigned && number < 0) {
             out.push("-");
+        }
+
+        if (unsigned)
+        {
+            number = number >>> 0;
         }
         
         // Prepare number 
@@ -427,6 +433,7 @@ var sffjs = (function() {
             numberIndex,
             formatIndex,
             endIndex,
+            ignore_tokens = [',', 'U', 'L', 'D', 'u', 'l', 'd'],
             
             out = [];
 
@@ -483,6 +490,16 @@ var sffjs = (function() {
             format = tokenGroups[1];
         } else {
             format = tokenGroups[!number && tokenGroups.length > 2 ? 2 : 0];
+        }
+
+        var is_unsigned = false;
+        if (format.indexOf('U') != -1 || format.indexOf("u") != -1) {
+            is_unsigned = true;
+        }
+
+        if (is_unsigned) {
+            number = number >>> 0;
+            groupedAppend(out, number.toString());
         }
 
         // Analyse format string
@@ -583,7 +600,8 @@ var sffjs = (function() {
                 }
                 
             // Other characters are written as they are, except from commas
-            } else if (currentToken !== ",") {
+            } else if (ignore_tokens.indexOf(currentToken) == -1) {
+                console.log("write " + currentToken);
                 out.push(currentToken);
             }
         }
